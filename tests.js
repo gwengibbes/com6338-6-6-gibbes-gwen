@@ -73,7 +73,7 @@ body.appendChild(testBtn)
 const scriptPaths = [
   "https://cdnjs.cloudflare.com/ajax/libs/mocha/8.3.2/mocha.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.4/chai.min.js",
-  // "https://cdnjs.cloudflare.com/ajax/libs/sinon.js/10.0.1/sinon.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/sinon.js/10.0.1/sinon.min.js",
   // "jsdom.js" // npx browserify _jsdom.js --standalone JSDOM -o jsdom.js
 ]
 const scriptTags = scriptPaths.map(path => {
@@ -117,132 +117,113 @@ function __handleClick() {
 function runTests() {
   testBtn.textContent = 'Running Tests'
   testBtn.disabled = true
-
   mochaDiv.style.display = 'block'
   body.style.overflow = 'hidden'
 
   mocha.setup("bdd");
   const expect = chai.expect;
 
-  String.prototype.includesLetters = function (letters) {
-    return letters.split("").every((letter) => this.includes(letter))
-  }
-
-  describe("Todo App", function () {
-    const button = document.querySelector('form button')
-    const input = document.querySelector('form input')
-    const list = document.getElementById('todo-list')
-    document.querySelector('form').addEventListener('submit', function(e) {
-      e.preventDefault()
-    })
-    afterEach(() => {
-      list.innerHTML = ""
-      input.value = ""
+  describe("Hamburger Menu", function() {
+    const hamburgerBtn = document.querySelector('.hamburger-btn')
+    const hamburgerMenu = document.querySelector('.hamburger-menu')
+    const openMenu = () => {
+      hamburgerMenu.classList.add('show-menu')
+      hamburgerBtn.setAttribute('aria-expanded', true)
+    }
+    const closeMenu = () => {
+      document.activeElement.blur()
+      hamburgerMenu.classList.remove('show-menu')
+      hamburgerBtn.setAttribute('aria-expanded', false)
+    }
+    const pressEscape = () => document.dispatchEvent(new KeyboardEvent('keyup', {
+      key: "Escape",
+      keyCode: 27,
+      which: 27,
+      code: "Escape",
+     }))
+    before(() => {
+      document.querySelector('style').textContent += `
+        .hamburger-btn {
+          display: block;
+        }
+        .hamburger-menu li {
+          visibility: hidden;
+        }
+        .hamburger-menu.show-menu li {
+          visibility: visible;
+        }
+      `
     })
     after(() => {
-      testBtn.disabled = false
       testBtn.textContent = 'Close Tests'
+      testBtn.disabled = false
     })
-    it('should not add a todo when clicking button without typing value', () => {
-      input.value = ""
-      button.click()
-      expect(list.innerHTML).to.eq("")
+    afterEach(closeMenu)
+    const menuIsOpen = () => hamburgerMenu.classList.contains('show-menu')
+    it('Should not have menu open when page loads', () => {
+      expect(menuIsOpen()).to.be.false
     })
-    it('should not add a todo when clicking button if input is filled with only spaces', () => {
-      input.value = "    "
-      button.click()
-      expect(list.innerHTML).to.eq("")
+    it('Should open menu when clicking the hamburger button', () => {
+      hamburgerBtn.click()
+      expect(menuIsOpen()).to.be.true
     })
-    it('should generate list item element when adding todo', () => {
-      input.value = "banana"
-      button.click()
-      expect(list.querySelector('li')).to.exist
+    it('Should set aria-expanded="true" to hamburger button when menu is opened', () => {
+      hamburgerBtn.click()
+      expect(hamburgerBtn.getAttribute('aria-expanded')).to.eq('true')
     })
-    it('should generate button element within list item element when adding todo', () => {
-      input.value = "banana"
-      button.click()
-      expect(list.querySelector('li > button')).to.exist
+    it('Should close menu when clicking the hamburger button', () => {
+      openMenu()
+      hamburgerBtn.click()
+      expect(menuIsOpen()).to.be.false
     })
-    it('should generate button element containing text of todo when adding todo', () => {
-      input.value = "banana"
-      button.click()
-      expect(list.querySelector('li > button').textContent).to.eq('banana')
+    it('Should set aria-expanded="false" to hamburger button when menu is closed', () => {
+      openMenu()
+      hamburgerBtn.click()
+      expect(hamburgerBtn.getAttribute('aria-expanded')).to.eq('false')
     })
-    it('should set value of input element to empty string after adding todo', () => {
-      input.value = "banana"
-      button.click()
-      expect(input.value).to.eq("")
+    it('Should NOT open menu when clicking things other than the hamburger button', () => {
+      document.querySelector('header').click()
+      expect(menuIsOpen()).to.be.false
+      document.querySelector('.banner').click()
+      expect(menuIsOpen()).to.be.false
+      document.querySelector('footer').click()
+      expect(menuIsOpen()).to.be.false
+      document.querySelector('section button').click()
+      expect(menuIsOpen()).to.be.false
     })
-    it('should mark todo as done by striking through text when todo is clicked ONCE', () => {
-      input.value = "banana"
-      button.click()
-      const todo = list.querySelector('li button')
-      expect(todo).to.exist
-      expect(todo.textContent).to.eq('banana')
-      expect(getComputedStyle(todo).textDecoration).to.not.include('line-through')
-      todo.click()
-      expect(getComputedStyle(todo).textDecoration).to.include('line-through')
+    it('Should close menu when clicking outside of the menu', () => {
+      openMenu()
+      document.querySelector('.banner').click()
+      expect(menuIsOpen()).to.be.false
+      openMenu()
+      document.querySelector('footer').click()
+      expect(menuIsOpen()).to.be.false
+      openMenu()
+      document.querySelector('section').click()
+      expect(menuIsOpen()).to.be.false
     })
-    it('should remove todo from list when clicking todo TWICE', () => {
-      input.value = "banana"
-      button.click()
-      const todo = list.querySelector('li button')
-      expect(todo).to.exist
-      expect(todo.textContent).to.eq('banana')
-      expect(getComputedStyle(todo).textDecoration).to.not.include('line-through')
-      todo.click()
-      todo.click()
-      expect(list.querySelector('li button')).to.not.exist
+    it('Should NOT close menu when clicking inside of the menu', () => {
+      openMenu()
+      document.querySelector('.hamburger-menu').click()
+      document.querySelector('.hamburger-menu li').click()
+      document.querySelector('.hamburger-menu li:nth-of-type(3) a').click()
+      expect(menuIsOpen()).to.be.true
     })
-    it('should add multiple todos', () => {
-      const todos = [
-        'banana',
-        'grape',
-        'mango',
-        'apple'
-      ]
-
-      todos.forEach((todo, index) => {
-        input.value = todo
-        button.click()
-        const todos = Array.from(list.querySelectorAll('li button'))
-        expect(todos.length === index + 1).to.be.true
-        const lastTodo = todos.find(todoEl => todoEl.textContent === todo)
-        expect(lastTodo).to.exist
-        expect(lastTodo.textContent).to.eq(todo)
-      })
+    it('Should close menu when pressing escape and menu items are NOT focused', () => {
+      openMenu()
+      pressEscape()
+      expect(menuIsOpen()).to.be.false
     })
-    it('should be able to remove todos from middle of the list', () => {
-      let todos = [
-        'banana',
-        'grape',
-        'mango',
-        'apple'
-      ]
-      let todoElements
-      todos.forEach(todo => {
-        input.value = todo
-        button.click()
-        todoElements = Array.from(list.querySelectorAll('li button'))
-        const lastTodo = todoElements.find(todoEl => todoEl.textContent === todo)
-        expect(lastTodo).to.exist
-        expect(lastTodo.textContent).to.eq(todo)
-      })
-
-      expect(todoElements.length).to.eq(todos.length)
-      todos = todos.filter(todo => todo !== 'mango')
-      mangoEl = todoElements.find(todo => todo.textContent === 'mango')
-      mangoEl.click()
-      expect(getComputedStyle(mangoEl).textDecoration.includes('line-through')).to.be.true
-      mangoEl.click()
-      todoElements = Array.from(list.querySelectorAll('li button'))
-      mangoEl = todoElements.find(todo => todo.textContent === 'mango')
-      expect(mangoEl).to.not.exist
-
-      todos.forEach(todo => {
-        const todoEl = todoElements.find(todoEl => todoEl.textContent === todo)
-        expect(todoEl).to.exist
-      })
+    it('Should close menu and focus hamburger button when pressing escape and menu items are focused', () => {
+      openMenu()
+      document.querySelector('.hamburger-menu a').focus()
+      pressEscape()
+      expect(document.activeElement).to.eq(hamburgerBtn)
+      expect(menuIsOpen()).to.be.false
+    })
+    it('Should NOT open menu when pressing escape', () => {
+      pressEscape()
+      expect(menuIsOpen()).to.be.false
     })
   });
 
